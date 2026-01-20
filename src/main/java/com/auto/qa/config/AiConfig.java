@@ -1,4 +1,4 @@
-package com.team.qa.config;
+package com.auto.qa.config;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -21,10 +21,6 @@ public class AiConfig {
         2. browser_snapshot으로 페이지 구조 파악 (항상 먼저 실행)
         3. 주요 기능 테스트 (browser_click, browser_type 등)
         4. 문제점 분석 및 보고
-        
-        ## URL 처리
-        - 사용자가 localhost나 127.0.0.1을 입력하면 host.docker.internal로 변환하여 접속
-        - 예: http://localhost:8080 → http://host.docker.internal:8080
         
         ## 보고 형식
         발견된 문제는 다음 형식으로 보고:

@@ -27,9 +27,15 @@
         </div>
         
         <form class="chat-input" id="chatForm">
+            <input type="url" id="urlInput" 
+                   placeholder="http://localhost:8080" 
+                   required
+                   autocomplete="off"
+                   style="width: 30%; margin-right: 10px;">
             <input type="text" id="userInput" 
-                   placeholder="테스트할 URL과 요청을 입력하세요..." 
-                   autocomplete="off">
+                   placeholder="테스트 요청을 입력하세요..." 
+                   autocomplete="off"
+                   style="flex: 1;">
             <button type="submit" id="sendBtn">전송</button>
         </form>
     </div>

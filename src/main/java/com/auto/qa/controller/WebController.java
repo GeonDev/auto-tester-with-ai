@@ -1,4 +1,4 @@
-package com.team.qa.controller;
+package com.auto.qa.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;

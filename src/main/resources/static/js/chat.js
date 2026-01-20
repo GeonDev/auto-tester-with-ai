@@ -2,6 +2,7 @@ class QaAgentChat {
     constructor() {
         this.messagesContainer = document.getElementById('messages');
         this.chatForm = document.getElementById('chatForm');
+        this.urlInput = document.getElementById('urlInput');
         this.userInput = document.getElementById('userInput');
         this.sendBtn = document.getElementById('sendBtn');
         this.stompClient = null;
@@ -43,19 +44,22 @@ class QaAgentChat {
         e.preventDefault();
         if (this.isProcessing) return;
         
+        const url = this.urlInput.value.trim();
         const message = this.userInput.value.trim();
-        if (!message) return;
+        
+        if (!url || !message) return;
         
         this.isProcessing = true;
         this.sendBtn.disabled = true;
         
-        this.addMessage('user', message);
+        this.addMessage('user', `URL: ${url}\n요청: ${message}`);
         this.userInput.value = '';
+        // URL input is intentionally kept to facilitate repeated tests on the same URL
         
         this.currentAssistantMessage = this.addMessage('assistant', '');
         this.addTypingIndicator();
         
-        this.stompClient.send('/app/chat', {}, JSON.stringify({ message }));
+        this.stompClient.send('/app/chat', {}, JSON.stringify({ url, message }));
     }
     
     addMessage(role, content) {

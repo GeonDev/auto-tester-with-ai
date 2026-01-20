@@ -1,4 +1,4 @@
-package com.team.qa.config;
+package com.auto.qa.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;

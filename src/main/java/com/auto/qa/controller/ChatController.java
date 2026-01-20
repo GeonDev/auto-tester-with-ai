@@ -1,6 +1,6 @@
-package com.team.qa.controller;
+package com.auto.qa.controller;
 
-import com.team.qa.service.QaAgentService;
+import com.auto.qa.service.AgentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -16,7 +16,7 @@ import reactor.core.publisher.Flux;
 @Slf4j
 public class ChatController {
 
-    private final QaAgentService qaAgentService;
+    private final AgentService agentService;
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -24,8 +24,8 @@ public class ChatController {
      */
     @PostMapping("/api/chat")
     public ResponseEntity<String> chat(@RequestBody ChatRequest request) {
-        log.info("REST chat request: {}", request.message());
-        String response = qaAgentService.runQaTestSync(request.message());
+        log.info("REST chat request: URL={}, Message={}", request.url(), request.message());
+        String response = agentService.runQaTestSync(request.url(), request.message());
         return ResponseEntity.ok(response);
     }
 
@@ -34,8 +34,8 @@ public class ChatController {
      */
     @PostMapping(value = "/api/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(@RequestBody ChatRequest request) {
-        log.info("Stream chat request: {}", request.message());
-        return qaAgentService.runQaTest(request.message());
+        log.info("Stream chat request: URL={}, Message={}", request.url(), request.message());
+        return agentService.runQaTest(request.url(), request.message());
     }
 
     /**
@@ -44,9 +44,9 @@ public class ChatController {
     @MessageMapping("/chat")
     public void handleChat(ChatRequest request, SimpMessageHeaderAccessor headerAccessor) {
         String sessionId = headerAccessor.getSessionId();
-        log.info("WebSocket chat request from session {}: {}", sessionId, request.message());
+        log.info("WebSocket chat request from session {}: URL={}, Message={}", sessionId, request.url(), request.message());
         
-        qaAgentService.runQaTest(request.message())
+        agentService.runQaTest(request.url(), request.message())
             .subscribe(
                 chunk -> {
                     messagingTemplate.convertAndSendToUser(
@@ -79,7 +79,7 @@ public class ChatController {
         );
     }
 
-    public record ChatRequest(String message) {}
+    public record ChatRequest(String url, String message) {}
     public record ChatResponse(String content, boolean done) {}
     public record ErrorResponse(String error) {}
 }

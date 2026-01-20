@@ -1,4 +1,4 @@
-package com.team.qa.service;
+package com.auto.qa.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,19 +9,20 @@ import reactor.core.publisher.Flux;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class QaAgentService {
+public class AgentService {
 
     private final ChatClient chatClient;
 
     /**
      * 스트리밍 방식으로 QA 테스트 실행
      */
-    public Flux<String> runQaTest(String userMessage) {
-        String processedMessage = processLocalUrl(userMessage);
-        log.debug("Processing QA request: {}", processedMessage);
+    public Flux<String> runQaTest(String url, String message) {
+        String processedUrl = processLocalUrl(url);
+        String fullPrompt = processedUrl + " " + message;
+        log.debug("Processing QA request: {}", fullPrompt);
         
         return chatClient.prompt()
-            .user(processedMessage)
+            .user(fullPrompt)
             .stream()
             .content();
     }
@@ -29,12 +30,13 @@ public class QaAgentService {
     /**
      * 동기 방식으로 QA 테스트 실행
      */
-    public String runQaTestSync(String userMessage) {
-        String processedMessage = processLocalUrl(userMessage);
-        log.debug("Processing QA request (sync): {}", processedMessage);
+    public String runQaTestSync(String url, String message) {
+        String processedUrl = processLocalUrl(url);
+        String fullPrompt = processedUrl + " " + message;
+        log.debug("Processing QA request (sync): {}", fullPrompt);
         
         return chatClient.prompt()
-            .user(processedMessage)
+            .user(fullPrompt)
             .call()
             .content();
     }

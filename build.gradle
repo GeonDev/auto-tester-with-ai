@@ -37,6 +37,9 @@ dependencies {
     // Spring AI MCP Client
     implementation 'org.springframework.ai:spring-ai-starter-mcp-client'
     
+    // Dotenv for loading .env files
+    implementation 'io.github.cdimascio:java-dotenv:5.2.2'
+
     // Utilities
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

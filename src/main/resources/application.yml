@@ -22,7 +22,8 @@ spring:
               args:
                 - "-y"
                 - "@playwright/mcp@latest"
-                - "--headless"
+                - "--timeout-action"
+                - "30000" # Set action timeout to 30 seconds
   
   thymeleaf:
     cache: false

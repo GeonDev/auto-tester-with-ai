@@ -1,8 +1,11 @@
 package com.auto.qa.service;
 
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -24,7 +27,17 @@ public class AgentService {
         return chatClient.prompt()
             .user(fullPrompt)
             .stream()
-            .content();
+            .content()
+            .doFinally(signalType -> {
+                if (signalType == reactor.core.publisher.SignalType.ON_COMPLETE) {
+                    log.info("QA test Flux completed successfully.");
+                } else if (signalType == reactor.core.publisher.SignalType.ON_ERROR) {
+                    log.error("QA test Flux completed with an error.");
+                } else if (signalType == reactor.core.publisher.SignalType.CANCEL) {
+                    log.warn("QA test Flux was cancelled.");
+                }
+            })
+            .concatWith(Flux.just("✨ 테스트 완료. 추가 테스트를 요청하거나, 궁금한 점을 질문해주세요.")); // Append a final message
     }
 
     /**

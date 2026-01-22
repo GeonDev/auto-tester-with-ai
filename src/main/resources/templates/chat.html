@@ -7,37 +7,32 @@
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-    <div class="chat-container">
-        <header class="chat-header">
-            <h1>🤖 QA Agent</h1>
-            <p>AI가 직접 브라우저를 조작하여 테스트합니다</p>
-        </header>
-        
-        <div class="chat-messages" id="messages">
-            <div class="message assistant">
-                <div class="message-content">
-                    안녕하세요! QA Agent입니다.<br><br>
-                    테스트할 URL과 함께 요청해주세요.<br><br>
-                    <strong>예시:</strong><br>
-                    • "http://localhost:8080 로그인 페이지 테스트해줘"<br>
-                    • "http://localhost:3000 회원가입 폼 검증해줘"<br>
-                    • "http://localhost:8080 에서 상품 검색 기능 테스트해줘"
+    <div class="container">
+        <div class="chat-window">
+            <div class="messages" id="messages">
+                <div class="message assistant">
+                    <div class="avatar">🤖</div>
+                    <div class="content">
+                        안녕하세요! QA Agent입니다.<br><br>
+                        테스트할 URL과 함께 요청해주세요.<br><br>
+                        <strong>예시:</strong><br>
+                        • "http://localhost:8080 로그인 페이지 테스트해줘"<br>
+                        • "http://localhost:3000 회원가입 폼 검증해줘"<br>
+                        • "http://localhost:8080 에서 상품 검색 기능 테스트해줘"
+                    </div>
                 </div>
             </div>
+            <form class="input-area" id="chatForm">
+                <input type="url" id="urlInput"
+                       placeholder="테스트할 URL 입력 (예: http://localhost:8080)"
+                       required
+                       autocomplete="off">
+                <input type="text" id="userInput"
+                       placeholder="테스트 요청을 입력하세요..."
+                       autocomplete="off">
+                <button type="submit" id="sendBtn">전송</button>
+            </form>
         </div>
-        
-        <form class="chat-input" id="chatForm">
-            <input type="url" id="urlInput" 
-                   placeholder="http://localhost:8080" 
-                   required
-                   autocomplete="off"
-                   style="width: 30%; margin-right: 10px;">
-            <input type="text" id="userInput" 
-                   placeholder="테스트 요청을 입력하세요..." 
-                   autocomplete="off"
-                   style="flex: 1;">
-            <button type="submit" id="sendBtn">전송</button>
-        </form>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>

@@ -65,10 +65,18 @@ class QaAgentChat {
     addMessage(role, content) {
         const div = document.createElement('div');
         div.className = `message ${role}`;
-        div.innerHTML = `<div class="message-content">${this.formatContent(content)}</div>`;
+        
+        let avatarEmoji = '';
+        if (role === 'assistant') {
+            avatarEmoji = '🤖';
+        } else if (role === 'user') {
+            avatarEmoji = '👤'; // Or a different emoji for user
+        }
+
+        div.innerHTML = `<div class="avatar">${avatarEmoji}</div><div class="content">${this.formatContent(content)}</div>`;
         this.messagesContainer.appendChild(div);
         this.scrollToBottom();
-        return div.querySelector('.message-content');
+        return div.querySelector('.content');
     }
     
     appendToCurrentMessage(chunk) {
@@ -79,6 +87,7 @@ class QaAgentChat {
             this.currentAssistantMessage.setAttribute('data-raw', newText);
             this.currentAssistantMessage.innerHTML = this.formatContent(newText);
             this.scrollToBottom();
+            this.addTypingIndicator(); // Re-add typing indicator at the end
         }
     }
     
@@ -91,7 +100,7 @@ class QaAgentChat {
     }
     
     addTypingIndicator() {
-        if (this.currentAssistantMessage) {
+        if (this.currentAssistantMessage && !this.currentAssistantMessage.querySelector('.typing')) {
             const indicator = document.createElement('span');
             indicator.className = 'typing';
             indicator.textContent = '●●●';

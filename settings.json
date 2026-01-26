@@ -1,0 +1,20 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  },
+  "general": {
+    "previewFeatures": true
+  },
+  "mcpServers": {
+    "shell": {
+      "command": "npx",
+      "args": ["-y", "@mkusaka/mcp-shell-server"]
+    },
+    "playwright": {
+      "command": "npx",
+       "args": ["-y", "@executeautomation/playwright-mcp-server"]
+    }
+  }
+}

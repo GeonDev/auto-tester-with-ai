@@ -1,0 +1,16 @@
+#!/bin/zsh
+
+# 인텔리제이 환경 대응을 위한 경로 추가
+export PATH="$PATH:/usr/local/bin:/opt/homebrew/bin"
+
+COMMIT_MSG_FILE=$1
+# 프로젝트 루트 기반의 절대 경로 확인
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+TMP_MSG_FILE="$PROJECT_ROOT/.git/GEMINI_MSG_TMP"
+
+# 임시 파일이 있고 내용이 비어있지 않은지 확인
+if [ -f "$TMP_MSG_FILE" ] && [ -s "$TMP_MSG_FILE" ]; then
+    # 기존 메시지(인텔리제이에 입력한 내용)가 있어도 제미나이 메시지로 덮어씌움
+    cat "$TMP_MSG_FILE" > "$COMMIT_MSG_FILE"
+    rm "$TMP_MSG_FILE"
+fi

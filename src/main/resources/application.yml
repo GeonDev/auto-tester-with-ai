@@ -2,6 +2,12 @@ spring:
   application:
     name: qa-agent-server
   
+  # HTTP Client timeout configuration
+  http:
+    client:
+      connect-timeout: 60s
+      read-timeout: 300s
+
   # Google GenAI 설정 (API Key 방식)
   ai:
     google:
@@ -23,13 +29,24 @@ spring:
                 - "-y"
                 - "@playwright/mcp@latest"
                 - "--timeout-action"
-                - "30000" # Set action timeout to 30 seconds
+                - "300000" # Set action timeout to 300 seconds (5 minutes)
+                - "--timeout-navigation"
+                - "300000" # Set navigation timeout to 300 seconds (5 minutes)
+                - "--no-sandbox" # Disable sandbox for browser to potentially help with local access issues
   
   thymeleaf:
     cache: false
 
 server:
   port: 8090
+
+# Application specific configurations
+app:
+  gemini:
+    models:
+      - gemini-2.5-flash
+      - gemini-2.5-flash-lite
+      - gemini-2.5-pro
 
 logging:
   level:

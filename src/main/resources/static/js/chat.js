@@ -5,6 +5,7 @@ class QaAgentChat {
         this.urlInput = document.getElementById('urlInput');
         this.userInput = document.getElementById('userInput');
         this.sendBtn = document.getElementById('sendBtn');
+        this.modelSelect = document.getElementById('modelSelect'); // Added
         this.stompClient = null;
         this.currentAssistantMessage = null;
         this.isProcessing = false;
@@ -20,6 +21,7 @@ class QaAgentChat {
         
         this.stompClient.connect({}, (frame) => {
             console.log('WebSocket 연결됨');
+            this.loadModels(); // Added
             
             this.stompClient.subscribe('/user/queue/response', (message) => {
                 const response = JSON.parse(message.body);
@@ -39,6 +41,28 @@ class QaAgentChat {
             setTimeout(() => this.connect(), 3000);
         });
     }
+
+    async loadModels() { // Added
+        try {
+            const response = await fetch('/api/models');
+            const models = await response.json();
+            
+            this.modelSelect.innerHTML = ''; // Clear existing options
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                this.modelSelect.appendChild(option);
+            });
+            // Set default selected model (e.g., the first one or a specific one)
+            if (models.length > 0) {
+                this.modelSelect.value = 'gemini-2.5-flash'; // Or models[0] if you prefer the first in list
+            }
+        } catch (error) {
+            console.error('모델 목록을 불러오는 데 실패했습니다:', error);
+            // Optionally, disable model selection or show an error to the user
+        }
+    }
     
     handleSubmit(e) {
         e.preventDefault();
@@ -46,20 +70,21 @@ class QaAgentChat {
         
         const url = this.urlInput.value.trim();
         const message = this.userInput.value.trim();
+        const model = this.modelSelect.value; // Get selected model // Added
         
         if (!url || !message) return;
         
         this.isProcessing = true;
         this.sendBtn.disabled = true;
         
-        this.addMessage('user', `URL: ${url}\n요청: ${message}`);
+        this.addMessage('user', `URL: ${url}\n요청: ${message}\n모델: ${model}`); // Updated
         this.userInput.value = '';
         // URL input is intentionally kept to facilitate repeated tests on the same URL
         
         this.currentAssistantMessage = this.addMessage('assistant', '');
         this.addTypingIndicator();
         
-        this.stompClient.send('/app/chat', {}, JSON.stringify({ url, message }));
+        this.stompClient.send('/app/chat', {}, JSON.stringify({ url, message, model })); // Updated
     }
     
     addMessage(role, content) {
@@ -139,3 +164,4 @@ class QaAgentChat {
 }
 
 document.addEventListener('DOMContentLoaded', () => new QaAgentChat());
+

@@ -11,7 +11,7 @@
         <div class="chat-window">
             <div class="messages" id="messages">
                 <div class="message assistant">
-                    <div class="avatar">🤖</div>
+                    <div class="avatar">AI</div>
                     <div class="content">
                         안녕하세요! QA Agent입니다.<br><br>
                         테스트할 URL과 함께 요청해주세요.<br><br>
@@ -21,6 +21,11 @@
                         • "http://localhost:8080 에서 상품 검색 기능 테스트해줘"
                     </div>
                 </div>
+
+            </div>
+            <div class="model-selection-area">
+                <label for="modelSelect">AI 모델 선택:</label>
+                <select id="modelSelect" class="model-select"></select>
             </div>
             <form class="input-area" id="chatForm">
                 <input type="url" id="urlInput"

@@ -4,9 +4,42 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import com.google.genai.Client;
+import org.springframework.ai.google.genai.GoogleGenAiChatModel;
+import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
+import org.springframework.ai.model.tool.ToolCallingManager;
+import org.springframework.retry.support.RetryTemplate;
+import io.micrometer.observation.ObservationRegistry;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 public class AiConfig {
+
+    private final Client genAiClient;
+    private final Double defaultTemperature;
+    private final ToolCallingManager toolCallingManager;
+    private final RetryTemplate retryTemplate;
+    private final ObservationRegistry observationRegistry;
+    private final GeminiModelProperties geminiModelProperties; // Inject GeminiModelProperties
+
+    public AiConfig(Client genAiClient,
+                    @Value("${spring.ai.google.genai.chat.options.temperature:0.3}") Double defaultTemperature,
+                    ToolCallingManager toolCallingManager,
+                    RetryTemplate retryTemplate,
+                    ObservationRegistry observationRegistry,
+                    GeminiModelProperties geminiModelProperties) { // Inject GeminiModelProperties
+        this.genAiClient = genAiClient;
+        this.defaultTemperature = defaultTemperature;
+        this.toolCallingManager = toolCallingManager;
+        this.retryTemplate = retryTemplate;
+        this.observationRegistry = observationRegistry;
+        this.geminiModelProperties = geminiModelProperties;
+    }
 
     private static final String QA_AGENT_SYSTEM_PROMPT = """
         당신은 웹 애플리케이션 QA 전문가 AI Agent입니다.
@@ -36,12 +69,24 @@ public class AiConfig {
         - `browser_click`, `browser_type` 등의 도구를 사용할 때는 `AccessibilityTree`에서 식별된 요소를 `ref` 속성을 활용하여 정확히 지정하도록 노력합니다.
         """;
 
+    // Common ChatClient.Builder setup
+    private ChatClient.Builder getChatClientBuilder(GoogleGenAiChatModel model, ToolCallbackProvider toolCallbackProvider) {
+        return ChatClient.builder(model)
+                .defaultSystem(QA_AGENT_SYSTEM_PROMPT)
+                .defaultToolCallbacks(toolCallbackProvider);
+    }
+
     @Bean
-    public ChatClient chatClient(ChatClient.Builder builder, 
-                                  ToolCallbackProvider toolCallbackProvider) {
-        return builder
-            .defaultSystem(QA_AGENT_SYSTEM_PROMPT)
-            .defaultToolCallbacks(toolCallbackProvider)
-            .build();
+    public Map<String, ChatClient> chatClients(ToolCallbackProvider toolCallbackProvider) {
+        Map<String, ChatClient> clients = new HashMap<>();
+        for (String modelName : geminiModelProperties.getModels()) {
+            GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
+                    .model(modelName)
+                    .temperature(defaultTemperature)
+                    .build();
+            GoogleGenAiChatModel model = new GoogleGenAiChatModel(genAiClient, chatOptions, toolCallingManager, retryTemplate, observationRegistry);
+            clients.put(modelName, getChatClientBuilder(model, toolCallbackProvider).build());
+        }
+        return clients;
     }
 }

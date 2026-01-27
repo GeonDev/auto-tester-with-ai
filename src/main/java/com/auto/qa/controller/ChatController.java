@@ -1,6 +1,7 @@
 package com.auto.qa.controller;
 
 import com.auto.qa.service.AgentService;
+import com.auto.qa.config.GeminiModelProperties; // Import GeminiModelProperties
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -11,6 +12,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.util.List; // Import List
+
 @RestController
 @RequiredArgsConstructor
 @Slf4j
@@ -18,14 +21,15 @@ public class ChatController {
 
     private final AgentService agentService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final GeminiModelProperties geminiModelProperties; // Inject GeminiModelProperties
 
     /**
      * REST API - 동기 응답
      */
     @PostMapping("/api/chat")
     public ResponseEntity<String> chat(@RequestBody ChatRequest request) {
-        log.info("REST chat request: URL={}, Message={}", request.url(), request.message());
-        String response = agentService.runQaTestSync(request.url(), request.message());
+        log.info("REST chat request: URL={}, Message={}, Model={}", request.url(), request.message(), request.model());
+        String response = agentService.runQaTestSync(request.url(), request.message(), request.model());
         return ResponseEntity.ok(response);
     }
 
@@ -34,8 +38,8 @@ public class ChatController {
      */
     @PostMapping(value = "/api/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(@RequestBody ChatRequest request) {
-        log.info("Stream chat request: URL={}, Message={}", request.url(), request.message());
-        return agentService.runQaTest(request.url(), request.message());
+        log.info("Stream chat request: URL={}, Message={}, Model={}", request.url(), request.message(), request.model());
+        return agentService.runQaTest(request.url(), request.message(), request.model());
     }
 
     /**
@@ -44,9 +48,9 @@ public class ChatController {
     @MessageMapping("/chat")
     public void handleChat(ChatRequest request, SimpMessageHeaderAccessor headerAccessor) {
         String sessionId = headerAccessor.getSessionId();
-        log.info("WebSocket chat request from session {}: URL={}, Message={}", sessionId, request.url(), request.message());
+        log.info("WebSocket chat request from session {}: URL={}, Message={}, Model={}", sessionId, request.url(), request.message(), request.model());
         
-        agentService.runQaTest(request.url(), request.message())
+        agentService.runQaTest(request.url(), request.message(), request.model())
             .subscribe(
                 chunk -> {
                     messagingTemplate.convertAndSendToUser(
@@ -73,13 +77,18 @@ public class ChatController {
             );
     }
 
+    @GetMapping("/api/models")
+    public ResponseEntity<List<String>> getAvailableModels() {
+        return ResponseEntity.ok(geminiModelProperties.getModels());
+    }
+
     private java.util.Map<String, Object> createHeaders(String sessionId) {
         return java.util.Map.of(
             "simpSessionId", sessionId
         );
     }
 
-    public record ChatRequest(String url, String message) {}
+    public record ChatRequest(String url, String message, String model) {}
     public record ChatResponse(String content, boolean done) {}
     public record ErrorResponse(String error) {}
 }

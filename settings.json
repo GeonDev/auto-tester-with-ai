@@ -15,6 +15,19 @@
     "playwright": {
       "command": "npx",
        "args": ["-y", "@executeautomation/playwright-mcp-server"]
+    },
+    "mcp-obsidian": {
+      "command": "uvx",
+      "args": [
+        "--python-preference",
+        "only-managed",
+        "--python",
+        "3.12",
+        "mcp-obsidian"
+      ],
+      "env": {
+        "OBSIDIAN_API_KEY": "<your_api_key_here>"
+      }
     }
   }
 }

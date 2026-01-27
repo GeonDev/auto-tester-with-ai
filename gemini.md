@@ -136,7 +136,7 @@ qa-agent-server/
 | 변수 | 설명 | 필수 | 기본값 |
 |------|------|------|--------|
 | `GEMINI_API_KEY` | Google AI Studio API Key | ✅ | - |
-| `GEMINI_MODEL` | 사용할 Gemini 모델 | ❌ | gemini-2.5-flash |
+| `GEMINI_MODEL` | 사용할 Gemini 모델 (application.yml의 `app.gemini.models` 참고) | ❌ | gemini-2.5-flash |
 | `GEMINI_TEMPERATURE` | 응답 창의성 (0.0~1.0) | ❌ | 0.3 |
 
 ### 사용 가능한 모델 (무료 티어)
@@ -175,6 +175,14 @@ spring:
 
 server:
   port: 8090
+
+# Application specific configurations
+app:
+  gemini:
+    models:
+      - gemini-2.5-flash
+      - gemini-2.5-flash-lite
+      - gemini-2.5-pro
 ```
 
 ### 모델 변경 방법
@@ -281,5 +289,5 @@ Docker 컨테이너에서 개발자 PC의 localhost에 접근하려면:
 3. API Key 생성 후 환경변수로 설정
 
 ### 브라우저 모드
-- 기본: Headless (화면 없이 실행)
-- `--headless` 옵션 제거 시 브라우저 창 표시 (디버깅용)
+- 기본: Headless (화면 없이 실행). `application.yml`에서 `--headless` 인자를 제거하거나 `--headed`를 추가하여 브라우저 창을 표시할 수 있습니다 (디버깅용).
+- `--no-sandbox` 옵션은 Docker 환경에서 Playwright 실행 시 발생할 수 있는 충돌을 방지하기 위해 추가되었습니다. (application.yml 참고)

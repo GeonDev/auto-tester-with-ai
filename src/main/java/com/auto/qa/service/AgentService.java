@@ -48,6 +48,13 @@ public class AgentService {
             .user(fullPrompt)
             .stream()
             .content()
+            .doOnNext(chunk -> log.debug("Streaming chunk: {}", chunk))
+            .concatWith(Flux.defer(() -> { // Use Flux.defer to calculate time lazily
+                Instant endTime = Instant.now();
+                Duration duration = Duration.between(startTime, endTime);
+                String elapsedTimeMessage = String.format("\n\n✨ 테스트 완료. 소요 시간: %d초. 사용 모델: %s. 추가 테스트를 요청하거나, 궁금한 점을 질문해주세요.", duration.getSeconds(), effectiveModelName);
+                return Flux.just(elapsedTimeMessage);
+            }))
             .doFinally(signalType -> {
                 if (signalType == reactor.core.publisher.SignalType.ON_COMPLETE) {
                     log.info("QA test Flux completed successfully using model: {}", effectiveModelName);
@@ -56,13 +63,7 @@ public class AgentService {
                 } else if (signalType == reactor.core.publisher.SignalType.CANCEL) {
                     log.warn("QA test Flux was cancelled using model: {}", effectiveModelName);
                 }
-            })
-            .concatWith(Flux.defer(() -> { // Use Flux.defer to calculate time lazily
-                Instant endTime = Instant.now();
-                Duration duration = Duration.between(startTime, endTime);
-                String elapsedTimeMessage = String.format("✨ 테스트 완료. 소요 시간: %d초. 사용 모델: %s. 추가 테스트를 요청하거나, 궁금한 점을 질문해주세요.", duration.getSeconds(), effectiveModelName);
-                return Flux.just(elapsedTimeMessage);
-            }));
+            });
     }
 
     /**

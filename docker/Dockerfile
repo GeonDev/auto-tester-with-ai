@@ -10,7 +10,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Playwright 브라우저 의존성 설치
-RUN npx playwright install-deps chromium
+RUN npx playwright install chromium --with-deps
 
 # Spring Boot JAR 복사
 COPY build/libs/*.jar app.jar

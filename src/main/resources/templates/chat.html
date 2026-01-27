@@ -15,33 +15,40 @@
                     <div class="content">
                         안녕하세요! QA Agent입니다.<br><br>
                         테스트할 URL과 함께 요청해주세요.<br><br>
-                        <strong>예시:</strong><br>
-                        • "http://localhost:8080 로그인 페이지 테스트해줘"<br>
-                        • "http://localhost:3000 회원가입 폼 검증해줘"<br>
-                        • "http://localhost:8080 에서 상품 검색 기능 테스트해줘"
                     </div>
                 </div>
 
             </div>
-            <div class="model-selection-area">
-                <label for="modelSelect">AI 모델 선택:</label>
-                <select id="modelSelect" class="model-select"></select>
-            </div>
-            <form class="input-area" id="chatForm">
-                <input type="url" id="urlInput"
-                       placeholder="테스트할 URL 입력 (예: http://localhost:8080)"
-                       required
-                       autocomplete="off">
-                <input type="text" id="userInput"
-                       placeholder="테스트 요청을 입력하세요..."
-                       autocomplete="off">
-                <button type="submit" id="sendBtn">전송</button>
+            <form class="input-container" id="chatForm">
+                <div class="input-top-row">
+                    <svg class="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        <path d="M12 8v4"></path>
+                        <path d="M12 16h.01"></path>
+                    </svg>
+                    <textarea id="userInput" placeholder="http://localhost:8080 로그인 페이지 테스트해줘" rows="1"></textarea>
+                </div>
+                <div class="input-bottom-row">
+                    <div class="bottom-left">
+                        <button type="button" class="icon-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="bottom-right">
+                        <div class="model-selector">
+                            <select id="modelSelect"></select>
+                        </div>
+                        <button type="submit" id="sendBtn" style="display: none;">전송</button>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <script th:src="@{/js/chat.js}"></script>
 </body>
 </html>

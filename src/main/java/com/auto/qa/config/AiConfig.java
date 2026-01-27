@@ -17,6 +17,11 @@ import io.micrometer.observation.ObservationRegistry;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.definition.ToolDefinition;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Arrays;
+
 @Configuration
 public class AiConfig {
 
@@ -69,15 +74,44 @@ public class AiConfig {
         - `browser_click`, `browser_type` 등의 도구를 사용할 때는 `AccessibilityTree`에서 식별된 요소를 `ref` 속성을 활용하여 정확히 지정하도록 노력합니다.
         """;
 
-    // Common ChatClient.Builder setup
-    private ChatClient.Builder getChatClientBuilder(GoogleGenAiChatModel model, ToolCallbackProvider toolCallbackProvider) {
-        return ChatClient.builder(model)
-                .defaultSystem(QA_AGENT_SYSTEM_PROMPT)
-                .defaultToolCallbacks(toolCallbackProvider);
-    }
-
     @Bean
     public Map<String, ChatClient> chatClients(ToolCallbackProvider toolCallbackProvider) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        ToolCallbackProvider wrappedProvider = () -> Arrays.stream(toolCallbackProvider.getToolCallbacks())
+                .map(tc -> new ToolCallback() {
+                    @Override
+                    public ToolDefinition getToolDefinition() {
+                        return tc.getToolDefinition();
+                    }
+
+                    @Override
+                    public String call(String input) {
+                        try {
+                            String result = tc.call(input);
+                            if (result == null) return "{\"error\": \"null result\"}";
+                            
+                            String trimmed = result.trim();
+                            if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || 
+                                (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+                                return result;
+                            }
+                            
+                            Map<String, String> wrapMap = new HashMap<>();
+                            wrapMap.put("result", result);
+                            return objectMapper.writeValueAsString(wrapMap);
+                        } catch (Exception e) {
+                            try {
+                                Map<String, String> errorMap = new HashMap<>();
+                                errorMap.put("error", e.getMessage());
+                                return objectMapper.writeValueAsString(errorMap);
+                            } catch (Exception ex) {
+                                return "{\"error\": \"Tool call failed and could not be serialized\"}";
+                            }
+                        }
+                    }
+                })
+                .toArray(ToolCallback[]::new);
+
         Map<String, ChatClient> clients = new HashMap<>();
         for (String modelName : geminiModelProperties.getModels()) {
             GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
@@ -85,7 +119,10 @@ public class AiConfig {
                     .temperature(defaultTemperature)
                     .build();
             GoogleGenAiChatModel model = new GoogleGenAiChatModel(genAiClient, chatOptions, toolCallingManager, retryTemplate, observationRegistry);
-            clients.put(modelName, getChatClientBuilder(model, toolCallbackProvider).build());
+            clients.put(modelName, ChatClient.builder(model)
+                    .defaultSystem(QA_AGENT_SYSTEM_PROMPT)
+                    .defaultToolCallbacks(wrappedProvider)
+                    .build());
         }
         return clients;
     }

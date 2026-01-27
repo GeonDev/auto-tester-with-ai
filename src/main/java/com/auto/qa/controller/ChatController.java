@@ -1,5 +1,8 @@
 package com.auto.qa.controller;
 
+import com.auto.qa.dto.ChatRequest;
+import com.auto.qa.dto.ChatResponse;
+import com.auto.qa.dto.ErrorResponse;
 import com.auto.qa.service.AgentService;
 import com.auto.qa.config.GeminiModelProperties; // Import GeminiModelProperties
 import lombok.RequiredArgsConstructor;
@@ -48,31 +51,40 @@ public class ChatController {
     @MessageMapping("/chat")
     public void handleChat(ChatRequest request, SimpMessageHeaderAccessor headerAccessor) {
         String sessionId = headerAccessor.getSessionId();
-        log.info("WebSocket chat request from session {}: URL={}, Message={}, Model={}", sessionId, request.url(), request.message(), request.model());
+        String user = (headerAccessor.getUser() != null) ? headerAccessor.getUser().getName() : "null";
+        log.info("WebSocket chat request from session {}: user={}, URL={}, Message={}, Model={}", sessionId, user, request.url(), request.message(), request.model());
         
         agentService.runQaTest(request.url(), request.message(), request.model())
             .subscribe(
                 chunk -> {
+                    log.debug("Sending chunk to session {}: {}", sessionId, chunk);
                     messagingTemplate.convertAndSendToUser(
                         sessionId, "/queue/response", 
                         new ChatResponse(chunk, false),
                         createHeaders(sessionId)
                     );
+                    // Also send to /topic/response for debugging
+                    messagingTemplate.convertAndSend("/topic/response-" + sessionId, new ChatResponse(chunk, false));
                 },
                 error -> {
-                    log.error("Error during QA test", error);
+                    log.error("Error during QA test for session " + sessionId, error);
                     messagingTemplate.convertAndSendToUser(
                         sessionId, "/queue/error",
                         new ErrorResponse(error.getMessage()),
                         createHeaders(sessionId)
                     );
+                    // Also send to /topic/response for debugging
+                    messagingTemplate.convertAndSend("/topic/response-" + sessionId, new ErrorResponse(error.getMessage()));
                 },
                 () -> {
+                    log.info("QA test completed for session {}", sessionId);
                     messagingTemplate.convertAndSendToUser(
                         sessionId, "/queue/response",
                         new ChatResponse("", true),
                         createHeaders(sessionId)
                     );
+                    // Also send to /topic/response for debugging
+                    messagingTemplate.convertAndSend("/topic/response-" + sessionId, new ChatResponse("", true));
                 }
             );
     }
@@ -87,8 +99,4 @@ public class ChatController {
             "simpSessionId", sessionId
         );
     }
-
-    public record ChatRequest(String url, String message, String model) {}
-    public record ChatResponse(String content, boolean done) {}
-    public record ErrorResponse(String error) {}
 }

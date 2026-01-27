@@ -2,7 +2,7 @@ class QaAgentChat {
     constructor() {
         this.messagesContainer = document.getElementById('messages');
         this.chatForm = document.getElementById('chatForm');
-        this.urlInput = document.getElementById('urlInput');
+        // this.urlInput = document.getElementById('urlInput'); // Removed from UI
         this.userInput = document.getElementById('userInput');
         this.sendBtn = document.getElementById('sendBtn');
         this.modelSelect = document.getElementById('modelSelect'); // Added
@@ -12,6 +12,20 @@ class QaAgentChat {
         
         this.connect();
         this.chatForm.addEventListener('submit', (e) => this.handleSubmit(e));
+        
+        // Auto-resize textarea
+        this.userInput.addEventListener('input', () => {
+            this.userInput.style.height = 'auto';
+            this.userInput.style.height = (this.userInput.scrollHeight) + 'px';
+        });
+
+        // Add keypress listener to userInput for Enter key submission
+        this.userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { // Prevent new line on Shift+Enter
+                e.preventDefault(); // Prevent default new line behavior in textarea/input
+                this.chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
     }
     
     connect() {
@@ -20,19 +34,36 @@ class QaAgentChat {
         this.stompClient.debug = null;
         
         this.stompClient.connect({}, (frame) => {
-            console.log('WebSocket 연결됨');
+            console.log('WebSocket 연결됨, frame:', frame);
             this.loadModels(); // Added
             
+            const sessionId = /\/([^/]+)\/websocket/.exec(socket._transport.url)[1];
+            console.log('STOMP session ID:', sessionId);
+
             this.stompClient.subscribe('/user/queue/response', (message) => {
+                console.log('Received response from server (STOMP /user/queue/response):', message.body);
                 const response = JSON.parse(message.body);
-                if (response.done) {
+                if (response.done === true) {
                     this.finalizeCurrentMessage();
                 } else {
                     this.appendToCurrentMessage(response.content);
                 }
             });
+
+            this.stompClient.subscribe('/topic/response-' + sessionId, (message) => {
+                console.log('Received response from server (STOMP /topic/response-' + sessionId + '):', message.body);
+                const response = JSON.parse(message.body);
+                if (response.done === true) {
+                    this.finalizeCurrentMessage();
+                } else {
+                    // Only append if not already appended by /user/queue/response to avoid duplicates if both work
+                    // But here we suspect /user/queue/response is NOT working.
+                    this.appendToCurrentMessage(response.content);
+                }
+            });
             
             this.stompClient.subscribe('/user/queue/error', (message) => {
+                console.log('Received error from server (STOMP /user/queue/error):', message.body);
                 const error = JSON.parse(message.body);
                 this.showError(error.error);
             });
@@ -48,15 +79,31 @@ class QaAgentChat {
             const models = await response.json();
             
             this.modelSelect.innerHTML = ''; // Clear existing options
+
+            // Add a disabled placeholder option
+            const placeholderOption = document.createElement('option');
+            placeholderOption.value = '';
+            placeholderOption.textContent = '모델 선택...'; // Placeholder text
+            placeholderOption.disabled = true;
+            placeholderOption.selected = true;
+            placeholderOption.hidden = true; // Hide from dropdown options
+            this.modelSelect.appendChild(placeholderOption);
+
             models.forEach(model => {
                 const option = document.createElement('option');
                 option.value = model;
                 option.textContent = model;
                 this.modelSelect.appendChild(option);
             });
+            console.log('Loaded models:', models);
             // Set default selected model (e.g., the first one or a specific one)
-            if (models.length > 0) {
-                this.modelSelect.value = 'gemini-2.5-flash'; // Or models[0] if you prefer the first in list
+            if (models && models.length > 0) {
+                // Ensure the default selection is one of the actual models, not the placeholder
+                if (models.includes('gemini-2.5-flash')) {
+                    this.modelSelect.value = 'gemini-2.5-flash';
+                } else {
+                    this.modelSelect.value = models[0];
+                }
             }
         } catch (error) {
             console.error('모델 목록을 불러오는 데 실패했습니다:', error);
@@ -66,60 +113,87 @@ class QaAgentChat {
     
     handleSubmit(e) {
         e.preventDefault();
-        if (this.isProcessing) return;
+        if (this.isProcessing) {
+            console.log('Already processing, ignoring submit');
+            return;
+        }
         
-        const url = this.urlInput.value.trim();
         const message = this.userInput.value.trim();
-        const model = this.modelSelect.value; // Get selected model // Added
+        const model = this.modelSelect.value; 
         
-        if (!url || !message) return;
+        if (!message) return;
+        
+        console.log('Submitting message:', message, 'model:', model);
+        let url = '';
+        const urlMatch = message.match(/https?:\/\/[^\s]+/);
+        if (urlMatch) {
+            url = urlMatch[0];
+        }
         
         this.isProcessing = true;
         this.sendBtn.disabled = true;
         
-        this.addMessage('user', `URL: ${url}\n요청: ${message}\n모델: ${model}`); // Updated
+        this.addMessage('user', (url ? `URL: ${url}\n` : '') + `요청: ${message}\n모델: ${model}`); 
         this.userInput.value = '';
-        // URL input is intentionally kept to facilitate repeated tests on the same URL
+        this.userInput.style.height = 'auto'; 
         
+        console.log('Starting new assistant message container');
         this.currentAssistantMessage = this.addMessage('assistant', '');
         this.addTypingIndicator();
         
-        this.stompClient.send('/app/chat', {}, JSON.stringify({ url, message, model })); // Updated
+        if (this.stompClient && this.stompClient.connected) {
+            this.stompClient.send('/app/chat', {}, JSON.stringify({ url, message, model })); 
+        } else {
+            console.error('STOMP client is not connected');
+            this.showError('서버 연결이 끊어졌습니다. 다시 시도해주세요.');
+        }
     }
     
     addMessage(role, content) {
         const div = document.createElement('div');
         div.className = `message ${role}`;
         
-        let avatarEmoji = '';
+        let avatarContent = '';
         if (role === 'assistant') {
-            avatarEmoji = '🤖';
+            avatarContent = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>';
         } else if (role === 'user') {
-            avatarEmoji = '👤'; // Or a different emoji for user
+            avatarContent = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
         }
 
-        div.innerHTML = `<div class="avatar">${avatarEmoji}</div><div class="content">${this.formatContent(content)}</div>`;
+        div.innerHTML = `<div class="avatar">${avatarContent}</div><div class="content">${this.formatContent(content)}</div>`;
         this.messagesContainer.appendChild(div);
         this.scrollToBottom();
         return div.querySelector('.content');
     }
     
     appendToCurrentMessage(chunk) {
-        if (this.currentAssistantMessage) {
-            this.removeTypingIndicator();
-            const currentText = this.currentAssistantMessage.getAttribute('data-raw') || '';
-            const newText = currentText + chunk;
-            this.currentAssistantMessage.setAttribute('data-raw', newText);
-            this.currentAssistantMessage.innerHTML = this.formatContent(newText);
-            this.scrollToBottom();
-            this.addTypingIndicator(); // Re-add typing indicator at the end
+        if (chunk === undefined || chunk === null || chunk === "") return; 
+        console.log('Appending chunk to UI (len=' + chunk.length + ')');
+        
+        if (!this.currentAssistantMessage) {
+            console.log('No current assistant message container, creating one');
+            this.currentAssistantMessage = this.addMessage('assistant', '');
         }
+
+        this.removeTypingIndicator();
+        const currentText = this.currentAssistantMessage.getAttribute('data-raw') || '';
+        const newText = currentText + chunk;
+        this.currentAssistantMessage.setAttribute('data-raw', newText);
+        this.currentAssistantMessage.innerHTML = this.formatContent(newText);
+        
+        if (!this.isFinalizing) {
+            this.addTypingIndicator();
+        }
+        this.scrollToBottom();
     }
     
     finalizeCurrentMessage() {
+        console.log('Finalizing message');
+        this.isFinalizing = true;
         this.removeTypingIndicator();
         this.currentAssistantMessage = null;
         this.isProcessing = false;
+        this.isFinalizing = false;
         this.sendBtn.disabled = false;
         this.userInput.focus();
     }
@@ -128,8 +202,9 @@ class QaAgentChat {
         if (this.currentAssistantMessage && !this.currentAssistantMessage.querySelector('.typing')) {
             const indicator = document.createElement('span');
             indicator.className = 'typing';
-            indicator.textContent = '●●●';
+            indicator.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
             this.currentAssistantMessage.appendChild(indicator);
+            console.log('Typing indicator added');
         }
     }
     
@@ -139,9 +214,12 @@ class QaAgentChat {
     }
     
     showError(error) {
+        console.error('Showing error:', error);
         this.removeTypingIndicator();
         if (this.currentAssistantMessage) {
             this.currentAssistantMessage.innerHTML = `<span class="error">❌ 오류: ${error}</span>`;
+        } else {
+            this.addMessage('assistant', `<span class="error">❌ 오류: ${error}</span>`);
         }
         this.finalizeCurrentMessage();
     }

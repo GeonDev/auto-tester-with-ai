@@ -21,6 +21,7 @@ spring:
     # MCP Client 설정 (Playwright MCP Server 연결)
     mcp:
       client:
+        sync-timeout: 120s
         stdio:
           connections:
             playwright:

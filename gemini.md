@@ -95,6 +95,7 @@ MCP Server → MCP Client → AI: "클릭 완료, 다음은..."
 | Framework | Spring Boot | 3.4.x |
 | AI | Spring AI + Google GenAI | 1.1.2 |
 | AI Starter | spring-ai-starter-model-google-genai | 1.1.2 |
+| AI Starter | spring-ai-starter-model-ollama       | 1.1.2 |
 | MCP Client | spring-ai-starter-mcp-client | 1.1.2 |
 | MCP Server | @playwright/mcp | latest |
 | Frontend | Thymeleaf + WebSocket (STOMP) | - |
@@ -143,8 +144,12 @@ qa-agent-server/
 | 변수 | 설명 | 필수 | 기본값 |
 |------|------|------|--------|
 | `GEMINI_API_KEY` | Google AI Studio API Key | ✅ | - |
+| `GEMINI_PROJECT_ID` | Google Cloud Project ID | ✅ | - |
 | `GEMINI_MODEL` | 사용할 Gemini 모델 (application.yml의 `app.gemini.models` 참고) | ❌ | gemini-2.5-flash |
 | `GEMINI_TEMPERATURE` | 응답 창의성 (0.0~1.0) | ❌ | 0.3 |
+| `OLLAMA_BASE_URL`    | Ollama 서버 기본 URL    | ❌ | http://localhost:11434 |
+| `OLLAMA_MODEL`       | 사용할 Ollama 모델      | ❌ | llama3.2 |
+| `OLLAMA_TEMPERATURE` | 응답 창의성 (0.0~1.0) | ❌ | 0.3 |
 
 ### 사용 가능한 모델 (무료 티어)
 
@@ -165,10 +170,17 @@ spring:
     google:
       genai:
         api-key: ${GEMINI_API_KEY}
+        project-id: ${GEMINI_PROJECT_ID} # ADDED Google GenAI project-id
         chat:
           options:
             model: ${GEMINI_MODEL:gemini-2.5-flash}
             temperature: ${GEMINI_TEMPERATURE:0.3}
+    ollama: # ADDED OLLAMA CONFIGURATION
+      chat:
+        base-url: ${OLLAMA_BASE_URL:http://localhost:11434} # Environment variable for Ollama base URL
+        options:
+          model: ${OLLAMA_MODEL:llama3.2} # Environment variable for Ollama model
+          temperature: ${OLLAMA_TEMPERATURE:0.3} # Environment variable for Ollama temperature
     mcp:
       client:
         sync-timeout: 120s

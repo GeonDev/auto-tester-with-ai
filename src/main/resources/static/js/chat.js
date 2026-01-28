@@ -2,14 +2,16 @@ class QaAgentChat {
     constructor() {
         this.messagesContainer = document.getElementById('messages');
         this.chatForm = document.getElementById('chatForm');
-        // this.urlInput = document.getElementById('urlInput'); // Removed from UI
         this.userInput = document.getElementById('userInput');
         this.sendBtn = document.getElementById('sendBtn');
-        this.modelSelect = document.getElementById('modelSelect'); // Added
+        this.sendBtn.style.display = 'none'; // Ensure send button is hidden initially
+        this.cancelBtn = document.getElementById('cancelBtn'); 
+        this.modelSelect = document.getElementById('modelSelect');
         this.stompClient = null;
         this.currentAssistantMessage = null;
         this.isProcessing = false;
-        
+        this.isFinalizing = false; 
+
         // Modal elements
         this.loadPromptBtn = document.getElementById('loadPromptBtn');
         this.promptHistoryModal = document.getElementById('promptHistoryModal');
@@ -41,6 +43,9 @@ class QaAgentChat {
                 this.closePromptHistoryModal();
             }
         });
+
+        // Event listener for the cancel button
+        this.cancelBtn.addEventListener('click', () => this.handleCancel());
     }
     
     connect() {
@@ -71,8 +76,6 @@ class QaAgentChat {
                 if (response.done === true) {
                     this.finalizeCurrentMessage();
                 } else {
-                    // Only append if not already appended by /user/queue/response to avoid duplicates if both work
-                    // But here we suspect /user/queue/response is NOT working.
                     this.appendToCurrentMessage(response.content);
                 }
             });
@@ -88,20 +91,19 @@ class QaAgentChat {
         });
     }
 
-    async loadModels() { // Added
+    async loadModels() {
         try {
             const response = await fetch('/api/models');
             const models = await response.json();
             
-            this.modelSelect.innerHTML = ''; // Clear existing options
+            this.modelSelect.innerHTML = '';
 
-            // Add a disabled placeholder option
             const placeholderOption = document.createElement('option');
             placeholderOption.value = '';
-            placeholderOption.textContent = '모델 선택...'; // Placeholder text
+            placeholderOption.textContent = '모델 선택...';
             placeholderOption.disabled = true;
             placeholderOption.selected = true;
-            placeholderOption.hidden = true; // Hide from dropdown options
+            placeholderOption.hidden = true;
             this.modelSelect.appendChild(placeholderOption);
 
             models.forEach(model => {
@@ -111,18 +113,16 @@ class QaAgentChat {
                 this.modelSelect.appendChild(option);
             });
             console.log('Loaded models:', models);
-            // Set default selected model (e.g., the first one or a specific one)
             if (models && models.length > 0) {
-                // Ensure the default selection is one of the actual models, not the placeholder
                 if (models.includes('gemini-2.5-flash')) {
                     this.modelSelect.value = 'gemini-2.5-flash';
                 } else {
                     this.modelSelect.value = models[0];
                 }
             }
+            this.sendBtn.style.display = 'inline-block'; // Show send button after models are loaded
         } catch (error) {
             console.error('모델 목록을 불러오는 데 실패했습니다:', error);
-            // Optionally, disable model selection or show an error to the user
         }
     }
     
@@ -146,7 +146,11 @@ class QaAgentChat {
         }
         
         this.isProcessing = true;
-        this.sendBtn.disabled = true;
+        this.sendBtn.style.display = 'none';      // Hide send button
+        this.cancelBtn.style.display = 'inline-block'; // Show cancel button
+        this.userInput.disabled = true;           // Disable user input
+        this.loadPromptBtn.disabled = true;       // Disable load prompt button
+        this.modelSelect.disabled = true;         // Disable model select
         
         this.addMessage('user', (url ? `URL: ${url}\n` : '') + `요청: ${message}\n모델: ${model}`); 
         this.userInput.value = '';
@@ -196,21 +200,27 @@ class QaAgentChat {
         this.currentAssistantMessage.setAttribute('data-raw', newText);
         this.currentAssistantMessage.innerHTML = this.formatContent(newText);
         
-        if (!this.isFinalizing) {
+        if (!this.isFinalizing) { // Only add typing indicator if not finalizing
             this.addTypingIndicator();
         }
         this.scrollToBottom();
     }
     
     finalizeCurrentMessage() {
-        console.log('Finalizing message');
+        if (this.isFinalizing) return; // Prevent multiple finalizations
         this.isFinalizing = true;
+        console.log('Finalizing message');
         this.removeTypingIndicator();
         this.currentAssistantMessage = null;
         this.isProcessing = false;
-        this.isFinalizing = false;
-        this.sendBtn.disabled = false;
+        
+        this.sendBtn.style.display = 'inline-block'; // Show send button
+        this.cancelBtn.style.display = 'none';      // Hide cancel button
+        this.userInput.disabled = false;           // Enable user input
+        this.loadPromptBtn.disabled = false;       // Enable load prompt button
+        this.modelSelect.disabled = false;         // Enable model select
         this.userInput.focus();
+        this.isFinalizing = false; // Reset flag after completion
     }
     
     addTypingIndicator() {
@@ -236,7 +246,7 @@ class QaAgentChat {
         } else {
             this.addMessage('assistant', `<span class="error">❌ 오류: ${error}</span>`);
         }
-        this.finalizeCurrentMessage();
+        this.finalizeCurrentMessage(); // Call finalize to ensure all cleanup happens
     }
     
     formatContent(content) {
@@ -263,7 +273,7 @@ class QaAgentChat {
 
     closePromptHistoryModal() {
         this.promptHistoryModal.style.display = 'none';
-        this.promptList.innerHTML = ''; // Clear list when closing
+        this.promptList.innerHTML = '';
     }
 
     async fetchPromptFiles() {
@@ -273,7 +283,7 @@ class QaAgentChat {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const files = await response.json();
-            this.promptList.innerHTML = ''; // Clear previous list
+            this.promptList.innerHTML = '';
 
             if (files.length === 0) {
                 const listItem = document.createElement('li');
@@ -301,13 +311,24 @@ class QaAgentChat {
             }
             const content = await response.text();
             this.userInput.value = content;
-            // Trigger input event to auto-resize textarea
             this.userInput.dispatchEvent(new Event('input'));
             this.closePromptHistoryModal();
             this.userInput.focus();
         } catch (error) {
             console.error(`프롬프트 파일 '${filename}' 내용을 불러오는 데 실패했습니다:`, error);
             alert(`프롬프트 파일 '${filename}' 내용을 불러오는 데 실패했습니다.`);
+        }
+    }
+
+    // New: Handle cancellation request
+    handleCancel() {
+        if (this.isProcessing && this.stompClient && this.stompClient.connected) {
+            console.log('Sending cancellation request...');
+            this.stompClient.send('/app/chat/cancel', {}, '');
+            this.appendToCurrentMessage('\n\n🚫 AI 응답을 중단하는 중...');
+            // UI state will be reset when the server confirms cancellation via a final message.
+        } else {
+            console.log('No active process to cancel or STOMP client not connected.');
         }
     }
 }

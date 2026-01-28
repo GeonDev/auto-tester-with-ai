@@ -7,7 +7,7 @@ import java.util.List;
 
 @Component
 @ConfigurationProperties("app.gemini")
-public class GeminiModelProperties {
+public class AiModelProperties {
 
     private List<String> models;
 

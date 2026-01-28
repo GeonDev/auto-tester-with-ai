@@ -99,6 +99,65 @@
     background-color: #f1f3f4;
 }
 
+/* New style for Send button */
+.send-button {
+    background-color: #1a73e8; /* Blue color consistent with the theme */
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px; /* Rounded corners */
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    min-width: 80px; /* Ensure a minimum width */
+    height: 40px; /* Ensure consistent height */
+    display: flex; /* Use flex to center text vertically */
+    justify-content: center;
+    align-items: center;
+}
+
+.send-button:hover {
+    background-color: #1558b0; /* Darker blue on hover */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.send-button:disabled {
+    background-color: #a8d1ff; /* Lighter blue when disabled */
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Style for Cancel button */
+.cancel-button {
+    background-color: #f1f3f4; /* Light grey background */
+    color: #5f6368; /* Dark grey text */
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px; /* Rounded corners */
+    font-size: 24px; /* Increased font size for larger square */
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    min-width: 80px; /* Ensure a minimum width */
+    height: 40px; /* Ensure consistent height */
+    display: flex; /* Use flex to center text vertically */
+    justify-content: center;
+    align-items: center;
+}
+
+.cancel-button:hover {
+    background-color: #e8eaed; /* Slightly darker grey on hover */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cancel-button:disabled {
+    background-color: #f8f9fa; /* Even lighter grey when disabled */
+    color: #b9b9b9;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 .model-selector {
     display: flex;
     align-items: center;

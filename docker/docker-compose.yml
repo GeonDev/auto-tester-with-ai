@@ -10,8 +10,12 @@ services:
       - "8090:8090"
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_PROJECT_ID=${GEMINI_PROJECT_ID}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
       - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-0.3}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
+      - OLLAMA_TEMPERATURE=${OLLAMA_TEMPERATURE:-0.3}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

@@ -13,15 +13,26 @@ spring:
     google:
       genai:
         api-key: ${GEMINI_API_KEY}
+        project-id: ${GEMINI_PROJECT_ID} # Added project-id
         chat:
           options:
             model: ${GEMINI_MODEL:gemini-2.5-flash}
             temperature: ${GEMINI_TEMPERATURE:0.3}
     
+    # Ollama 설정
+    ollama:
+      chat:
+        options:
+          model: llama3.2 # Default model, can be overridden by user
+        base-url: http://localhost:11434 # Default Ollama host (assuming local installation)
+      models: # Custom models list for the application to display/use
+        - llama3.2
+        - qwen2.5:3b
+
     # MCP Client 설정 (Playwright MCP Server 연결)
     mcp:
       client:
-        sync-timeout: 120s
+        sync-timeout: 300s
         stdio:
           connections:
             playwright:
@@ -51,9 +62,7 @@ app:
   gemini:
     models:
       - gemini-2.5-flash
-      - gemini-2.5-flash-lite
       - gemini-2.5-pro
-
 logging:
   level:
     com.team.qa: DEBUG

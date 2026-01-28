@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ import java.util.UUID;
 public class AgentService {
 
     private final Map<String, ChatClient> chatClients; // Inject map of ChatClients
+    private final Map<String, Disposable> activeDisposables = new ConcurrentHashMap<>(); // To manage active streaming operations
 
     @Value("${spring.ai.mcp.client.stdio.filesystem.args[2]:./qa-prompts}")
     private String qaPromptsBasePath;
@@ -47,19 +50,17 @@ public class AgentService {
         }
 
         String processedUrl = processLocalUrl(url);
-        String fullPrompt = processedUrl + " " + message;
-        // Append instruction to close the browser after the test
-        String closeBrowserInstruction = " 테스트가 완료되면 브라우저를 닫아주세요.";
-        String finalPrompt = fullPrompt + closeBrowserInstruction;
-        log.debug("Processing QA request: {}", finalPrompt);
+        // aiPrompt is the full prompt sent to the AI, including the processed URL and user's message
+        String aiPrompt = processedUrl + " " + message;
+        log.debug("Processing QA request: {}", aiPrompt);
 
-        // Save the prompt to a file
-        savePromptToFile(finalPrompt);
+        // Save only the user's original message to the prompt history
+        savePromptToFile(message);
 
         Instant startTime = Instant.now(); // Record start time
 
         return selectedChatClient.prompt() // Use selectedChatClient
-            .user(finalPrompt)
+            .user(aiPrompt)
             .stream()
             .content()
             .doOnNext(chunk -> log.debug("Streaming chunk: {}", chunk))
@@ -94,19 +95,53 @@ public class AgentService {
         }
 
         String processedUrl = processLocalUrl(url);
-        String fullPrompt = processedUrl + " " + message;
-        // Append instruction to close the browser after the test
-        String closeBrowserInstruction = " 테스트가 완료되면 브라우저를 닫아주세요.";
-        String finalPrompt = fullPrompt + closeBrowserInstruction;
-        log.debug("Processing QA request (sync) using model: {}", finalPrompt);
+        // aiPrompt is the full prompt sent to the AI, including the processed URL and user's message
+        String aiPrompt = processedUrl + " " + message;
+        log.debug("Processing QA request (sync) using model: {}", aiPrompt);
         
-        // Save the prompt to a file
-        savePromptToFile(finalPrompt);
+        // Save only the user's original message to the prompt history
+        savePromptToFile(message);
 
         return selectedChatClient.prompt() // Use selectedChatClient
-            .user(finalPrompt)
+            .user(aiPrompt)
             .call()
             .content();
+    }
+
+    /**
+     * 특정 세션 ID와 연결된 Flux 구독을 저장합니다.
+     * @param sessionId 현재 WebSocket 세션 ID
+     * @param disposable Flux 구독 객체
+     */
+    public void addDisposable(String sessionId, Disposable disposable) {
+        activeDisposables.put(sessionId, disposable);
+        log.debug("Disposable added for session: {}", sessionId);
+    }
+
+    /**
+     * 특정 세션 ID와 연결된 Flux 구독을 제거합니다.
+     * @param sessionId 현재 WebSocket 세션 ID
+     */
+    public void removeDisposable(String sessionId) {
+        activeDisposables.remove(sessionId);
+        log.debug("Disposable removed for session: {}", sessionId);
+    }
+
+    /**
+     * 특정 세션 ID와 연결된 Flux 구독을 취소합니다.
+     * @param sessionId 현재 WebSocket 세션 ID
+     * @return 취소 성공 여부
+     */
+    public boolean cancelDisposable(String sessionId) {
+        Disposable disposable = activeDisposables.get(sessionId);
+        if (disposable != null && !disposable.isDisposed()) {
+            disposable.dispose();
+            activeDisposables.remove(sessionId);
+            log.info("Cancelled ongoing Flux for session: {}", sessionId);
+            return true;
+        }
+        log.warn("No active Flux or already disposed for session: {}", sessionId);
+        return false;
     }
 
     /**
@@ -119,13 +154,32 @@ public class AgentService {
     }
 
     /**
-     * 프롬프트를 파일로 저장
+     * 프롬프트를 파일로 저장 (중복 방지)
      */
     private void savePromptToFile(String prompt) {
         try {
             Path historyDir = Paths.get(qaPromptsBasePath, "history");
             if (!Files.exists(historyDir)) {
                 Files.createDirectories(historyDir);
+            }
+
+            // Check for duplicate prompts
+            try (var paths = Files.list(historyDir)) {
+                boolean duplicate = paths
+                    .filter(Files::isRegularFile)
+                    .anyMatch(file -> {
+                        try {
+                            return Files.readString(file).equals(prompt);
+                        } catch (IOException e) {
+                            log.warn("Failed to read history file {}: {}", file, e.getMessage());
+                            return false;
+                        }
+                    });
+
+                if (duplicate) {
+                    log.info("Duplicate prompt found, not saving: {}", prompt);
+                    return;
+                }
             }
 
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));

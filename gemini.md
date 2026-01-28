@@ -97,7 +97,8 @@ MCP Server → MCP Client → AI: "클릭 완료, 다음은..."
 | AI Starter | spring-ai-starter-model-google-genai | 1.1.2 |
 | AI Starter | spring-ai-starter-model-ollama       | 1.1.2 |
 | MCP Client | spring-ai-starter-mcp-client | 1.1.2 |
-| MCP Server | @playwright/mcp | latest |
+| MCP Server | @playwright/mcp       | latest |
+| MCP Server | @chrome-devtools/mcp | latest |
 | Frontend | Thymeleaf + WebSocket (STOMP) | - |
 | Container | Docker | - |
 
@@ -113,12 +114,17 @@ qa-agent-server/
 │   ├── AgentApplication.java       # 메인
 │   ├── config/
 │   │   ├── AiConfig.java             # ChatClient + MCP 도구 설정
+│   │   ├── AiModelProperties.java    # AI 모델 관련 설정 (추가됨)
 │   │   └── WebSocketConfig.java      # STOMP 설정
-│   ├── service/
-│   │   └── AgentService.java       # AI Agent 핵심 로직
-│   └── controller/
-│       ├── ChatController.java       # REST + WebSocket
-│       └── WebController.java        # 페이지 렌더링
+│   ├── controller/
+│   │   ├── ChatController.java       # REST + WebSocket
+│   │   └── WebController.java        # 페이지 렌더링
+│   ├── dto/                          # DTO (Data Transfer Object) (추가됨)
+│   │   ├── ChatRequest.java
+│   │   ├── ChatResponse.java
+│   │   └── ErrorResponse.java
+│   └── service/
+│       └── AgentService.java       # AI Agent 핵심 로직
 │
 ├── src/main/resources/
 │   ├── application.yml               # 설정 (MCP 연결 포함)
@@ -132,7 +138,10 @@ qa-agent-server/
 │   ├── Dockerfile
 │   └── docker-compose.yml
 │
-└── build.gradle
+├── build.gradle
+└── src/                                # (추가됨)
+    └── test/
+        └── java/
 ```
 
 ---
@@ -183,7 +192,7 @@ spring:
           temperature: ${OLLAMA_TEMPERATURE:0.3} # Environment variable for Ollama temperature
     mcp:
       client:
-        sync-timeout: 120s
+        sync-timeout: 300s
         stdio:
           connections:
             playwright:
@@ -194,6 +203,14 @@ spring:
                 - "--timeout-action"
                 - "300000"
                 - "--timeout-navigation"
+                - "300000"
+                - "--no-sandbox"
+            chrome-devtools: # Added chrome-devtools MCP connection
+              command: npx
+              args:
+                - "-y"
+                - "@chrome-devtools/mcp@latest" # Placeholder package, adjust if actual package differs
+                - "--timeout-action"
                 - "300000"
                 - "--no-sandbox"
           filesystem:
@@ -211,7 +228,6 @@ app:
   gemini:
     models:
       - gemini-2.5-flash
-      - gemini-2.5-flash-lite
       - gemini-2.5-pro
 ```
 

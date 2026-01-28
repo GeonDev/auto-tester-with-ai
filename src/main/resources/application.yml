@@ -45,6 +45,14 @@ spring:
                 - "--timeout-navigation"
                 - "300000"
                 - "--no-sandbox"
+            chrome-devtools:
+              command: npx
+              args:
+                - "-y"
+                - "@chrome-devtools/mcp@latest"
+                - "--timeout-action"
+                - "300000"
+                - "--no-sandbox"
           filesystem:
             command: npx
             args:

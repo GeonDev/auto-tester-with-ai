@@ -252,3 +252,81 @@ body {
     0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
     40% { transform: translateY(-6px); opacity: 1; }
 }
+
+/* Modal Styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 80%;
+    max-width: 500px;
+    position: relative;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.close-button {
+    color: #aaa;
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 22px;
+    text-align: center;
+}
+
+#promptList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#promptList li {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 16px;
+    color: #555;
+    word-break: break-all;
+}
+
+#promptList li:last-child {
+    border-bottom: none;
+}
+
+#promptList li:hover {
+    background-color: #f5f5f5;
+    color: #222;
+}

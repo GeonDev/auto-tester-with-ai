@@ -48,15 +48,18 @@ public class AgentService {
 
         String processedUrl = processLocalUrl(url);
         String fullPrompt = processedUrl + " " + message;
-        log.debug("Processing QA request: {}", fullPrompt);
+        // Append instruction to close the browser after the test
+        String closeBrowserInstruction = " 테스트가 완료되면 브라우저를 닫아주세요.";
+        String finalPrompt = fullPrompt + closeBrowserInstruction;
+        log.debug("Processing QA request: {}", finalPrompt);
 
         // Save the prompt to a file
-        savePromptToFile(fullPrompt);
+        savePromptToFile(finalPrompt);
 
         Instant startTime = Instant.now(); // Record start time
 
         return selectedChatClient.prompt() // Use selectedChatClient
-            .user(fullPrompt)
+            .user(finalPrompt)
             .stream()
             .content()
             .doOnNext(chunk -> log.debug("Streaming chunk: {}", chunk))
@@ -92,13 +95,16 @@ public class AgentService {
 
         String processedUrl = processLocalUrl(url);
         String fullPrompt = processedUrl + " " + message;
-        log.debug("Processing QA request (sync) using model: {}", effectiveModelName);
+        // Append instruction to close the browser after the test
+        String closeBrowserInstruction = " 테스트가 완료되면 브라우저를 닫아주세요.";
+        String finalPrompt = fullPrompt + closeBrowserInstruction;
+        log.debug("Processing QA request (sync) using model: {}", finalPrompt);
         
         // Save the prompt to a file
-        savePromptToFile(fullPrompt);
+        savePromptToFile(finalPrompt);
 
         return selectedChatClient.prompt() // Use selectedChatClient
-            .user(fullPrompt)
+            .user(finalPrompt)
             .call()
             .content();
     }

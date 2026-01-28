@@ -4,9 +4,10 @@ import com.auto.qa.dto.ChatRequest;
 import com.auto.qa.dto.ChatResponse;
 import com.auto.qa.dto.ErrorResponse;
 import com.auto.qa.service.AgentService;
-import com.auto.qa.config.GeminiModelProperties; // Import GeminiModelProperties
+import com.auto.qa.config.GeminiModelProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -15,7 +16,13 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
-import java.util.List; // Import List
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,7 +31,10 @@ public class ChatController {
 
     private final AgentService agentService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final GeminiModelProperties geminiModelProperties; // Inject GeminiModelProperties
+    private final GeminiModelProperties geminiModelProperties;
+
+    @Value("${spring.ai.mcp.client.stdio.filesystem.args[2]:./qa-prompts}")
+    private String qaPromptsBasePath;
 
     /**
      * REST API - 동기 응답
@@ -98,5 +108,42 @@ public class ChatController {
         return java.util.Map.of(
             "simpSessionId", sessionId
         );
+    }
+
+    /**
+     * REST API - QA 프롬프트 히스토리 파일 목록 조회
+     */
+    @GetMapping("/api/prompts/history/files")
+    public ResponseEntity<List<String>> getPromptHistoryFiles() {
+        Path historyDir = Paths.get(qaPromptsBasePath, "history");
+        try (Stream<Path> paths = Files.list(historyDir)) {
+            List<String> fileNames = paths
+                .filter(Files::isRegularFile)
+                .map(Path::getFileName)
+                .map(Path::toString)
+                .collect(Collectors.toList());
+            return ResponseEntity.ok(fileNames);
+        } catch (IOException e) {
+            log.error("Failed to list prompt history files: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * REST API - QA 프롬프트 히스토리 파일 내용 조회
+     */
+    @GetMapping("/api/prompts/history/content/{filename}")
+    public ResponseEntity<String> getPromptHistoryFileContent(@PathVariable String filename) {
+        Path filePath = Paths.get(qaPromptsBasePath, "history", filename);
+        try {
+            if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+                return ResponseEntity.notFound().build();
+            }
+            String content = Files.readString(filePath);
+            return ResponseEntity.ok(content);
+        } catch (IOException e) {
+            log.error("Failed to read prompt history file {}: {}", filename, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

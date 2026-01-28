@@ -30,7 +30,7 @@
                 </div>
                 <div class="input-bottom-row">
                     <div class="bottom-left">
-                        <button type="button" class="icon-btn">
+                        <button type="button" class="icon-btn" id="loadPromptBtn" title="프롬프트 불러오기">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -45,6 +45,17 @@
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Prompt History Modal -->
+    <div id="promptHistoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3>저장된 프롬프트 불러오기</h3>
+            <ul id="promptList">
+                <!-- Prompt files will be loaded here -->
+            </ul>
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>

@@ -10,6 +10,12 @@ class QaAgentChat {
         this.currentAssistantMessage = null;
         this.isProcessing = false;
         
+        // Modal elements
+        this.loadPromptBtn = document.getElementById('loadPromptBtn');
+        this.promptHistoryModal = document.getElementById('promptHistoryModal');
+        this.closeModalBtn = this.promptHistoryModal.querySelector('.close-button');
+        this.promptList = document.getElementById('promptList');
+        
         this.connect();
         this.chatForm.addEventListener('submit', (e) => this.handleSubmit(e));
         
@@ -24,6 +30,15 @@ class QaAgentChat {
             if (e.key === 'Enter' && !e.shiftKey) { // Prevent new line on Shift+Enter
                 e.preventDefault(); // Prevent default new line behavior in textarea/input
                 this.chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Event listeners for the modal
+        this.loadPromptBtn.addEventListener('click', () => this.openPromptHistoryModal());
+        this.closeModalBtn.addEventListener('click', () => this.closePromptHistoryModal());
+        window.addEventListener('click', (event) => {
+            if (event.target == this.promptHistoryModal) {
+                this.closePromptHistoryModal();
             }
         });
     }
@@ -239,7 +254,62 @@ class QaAgentChat {
     scrollToBottom() {
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
     }
+
+    // New methods for prompt history functionality
+    async openPromptHistoryModal() {
+        this.promptHistoryModal.style.display = 'flex';
+        await this.fetchPromptFiles();
+    }
+
+    closePromptHistoryModal() {
+        this.promptHistoryModal.style.display = 'none';
+        this.promptList.innerHTML = ''; // Clear list when closing
+    }
+
+    async fetchPromptFiles() {
+        try {
+            const response = await fetch('/api/prompts/history/files');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const files = await response.json();
+            this.promptList.innerHTML = ''; // Clear previous list
+
+            if (files.length === 0) {
+                const listItem = document.createElement('li');
+                listItem.textContent = '저장된 프롬프트가 없습니다.';
+                this.promptList.appendChild(listItem);
+            } else {
+                files.forEach(filename => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = filename;
+                    listItem.addEventListener('click', () => this.loadPromptContent(filename));
+                    this.promptList.appendChild(listItem);
+                });
+            }
+        } catch (error) {
+            console.error('프롬프트 히스토리 파일을 불러오는 데 실패했습니다:', error);
+            this.promptList.innerHTML = '<li>프롬프트 히스토리 파일을 불러오는 데 실패했습니다.</li>';
+        }
+    }
+
+    async loadPromptContent(filename) {
+        try {
+            const response = await fetch(`/api/prompts/history/content/${filename}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const content = await response.text();
+            this.userInput.value = content;
+            // Trigger input event to auto-resize textarea
+            this.userInput.dispatchEvent(new Event('input'));
+            this.closePromptHistoryModal();
+            this.userInput.focus();
+        } catch (error) {
+            console.error(`프롬프트 파일 '${filename}' 내용을 불러오는 데 실패했습니다:`, error);
+            alert(`프롬프트 파일 '${filename}' 내용을 불러오는 데 실패했습니다.`);
+        }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => new QaAgentChat());
-

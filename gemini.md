@@ -25,6 +25,13 @@
 │  3. 로그인 폼 입력 → browser_type 호출                       │
 │  4. 로그인 버튼 클릭 → browser_click 호출                    │
 │  5. 결과 확인 → browser_snapshot 호출                       │
+┌─────────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 프롬프트 저장 (AgentService)               │
+│                                                              │
+│  사용자 프롬프트 qa-prompts/history 폴더에 파일로 저장        │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
@@ -101,13 +108,13 @@ MCP Server → MCP Client → AI: "클릭 완료, 다음은..."
 
 ```
 qa-agent-server/
-├── src/main/java/com/team/qa/
-│   ├── QaAgentApplication.java       # 메인
+├── src/main/java/com/auto/qa/
+│   ├── AgentApplication.java       # 메인
 │   ├── config/
 │   │   ├── AiConfig.java             # ChatClient + MCP 도구 설정
 │   │   └── WebSocketConfig.java      # STOMP 설정
 │   ├── service/
-│   │   └── QaAgentService.java       # AI Agent 핵심 로직
+│   │   └── AgentService.java       # AI Agent 핵심 로직
 │   └── controller/
 │       ├── ChatController.java       # REST + WebSocket
 │       └── WebController.java        # 페이지 렌더링
@@ -164,6 +171,7 @@ spring:
             temperature: ${GEMINI_TEMPERATURE:0.3}
     mcp:
       client:
+        sync-timeout: 120s
         stdio:
           connections:
             playwright:
@@ -171,7 +179,17 @@ spring:
               args:
                 - "-y"
                 - "@playwright/mcp@latest"
-                - "--headless"
+                - "--timeout-action"
+                - "300000"
+                - "--timeout-navigation"
+                - "300000"
+                - "--no-sandbox"
+          filesystem:
+            command: npx
+            args:
+              - "-y"
+              - "@modelcontextprotocol/server-filesystem"
+              - "./qa-prompts"
 
 server:
   port: 8090
@@ -232,6 +250,60 @@ Spring Boot 시작 시:
 │  [입력창: 메시지를 입력하세요...]            [전송]         │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## API 엔드포인트
+
+QA Agent Server는 다음과 같은 API 엔드포인트를 제공합니다.
+
+### 1. REST API
+
+HTTP 기반의 요청-응답 방식으로 동작하며, 동기 및 스트리밍 응답을 지원합니다.
+
+*   **`POST /api/chat`**
+    *   **설명**: 사용자 메시지를 받아 QA 테스트를 실행하고, 완료 후 최종 응답을 **동기적으로** 반환합니다.
+    *   **요청**: `ChatRequest` (JSON) - 테스트할 URL, 메시지, 모델 정보 포함
+    *   **응답**: `String` - QA 테스트 결과
+    *   **예시**:
+        ```bash
+        curl -X POST http://localhost:8090/api/chat \
+             -H "Content-Type: application/json" \
+             -d '{"url": "http://localhost:8080/login", "message": "로그인 테스트해줘"}'
+        ```
+
+*   **`POST /api/chat/stream`**
+    *   **설명**: 사용자 메시지를 받아 QA 테스트를 실행하고, 진행 상황을 **스트리밍(SSE)** 방식으로 실시간 응답합니다.
+    *   **요청**: `ChatRequest` (JSON) - 테스트할 URL, 메시지, 모델 정보 포함
+    *   **응답**: `Flux<String>` (text/event-stream) - QA 테스트 진행 단계별 응답
+    *   **예시**:
+        ```bash
+        curl -N -X POST http://localhost:8090/api/chat/stream \
+             -H "Content-Type: application/json" \
+             -d '{"url": "http://localhost:8080/login", "message": "로그인 테스트해줘"}'
+        ```
+
+*   **`GET /api/models`**
+    *   **설명**: 현재 사용 가능한 Gemini 모델 목록을 반환합니다.
+    *   **요청**: 없음
+    *   **응답**: `List<String>` - 사용 가능한 모델 이름 목록
+    *   **예시**:
+        ```bash
+        curl http://localhost:8090/api/models
+        ```
+
+### 2. WebSocket 엔드포인트
+
+실시간 양방향 통신을 위해 WebSocket을 사용합니다. 스트리밍 응답에 최적화되어 있습니다.
+
+*   **`/chat` (`@MessageMapping("/chat")`)**
+    *   **설명**: 클라이언트로부터 `ChatRequest`를 받아 QA 테스트를 실행하고, 진행 상황 및 결과를 해당 세션으로 스트리밍합니다.
+    *   **요청**: WebSocket 메시지 - `ChatRequest` (JSON)
+    *   **응답**: `/user/{sessionId}/queue/response` (개별 세션) 및 `/topic/response-{sessionId}` (디버깅용) 로 `ChatResponse` 메시지 스트리밍
+    *   **주요 특징**:
+        *   연결 시 `sessionId` 기반으로 응답이 라우팅됩니다.
+        *   테스트 진행 단계별로 `ChatResponse` 객체(`content`, `complete` 필드 포함)를 전송합니다.
+        *   오류 발생 시 `/user/{sessionId}/queue/error`로 `ErrorResponse`를 전송합니다.
 
 ---
 

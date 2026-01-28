@@ -30,10 +30,16 @@ spring:
                 - "-y"
                 - "@playwright/mcp@latest"
                 - "--timeout-action"
-                - "300000" # Set action timeout to 300 seconds (5 minutes)
+                - "300000"
                 - "--timeout-navigation"
-                - "300000" # Set navigation timeout to 300 seconds (5 minutes)
-                - "--no-sandbox" # Disable sandbox for browser to potentially help with local access issues
+                - "300000"
+                - "--no-sandbox"
+          filesystem:
+            command: npx
+            args:
+              - "-y"
+              - "@modelcontextprotocol/server-filesystem"
+              - "./qa-prompts"
   
   thymeleaf:
     cache: false
@@ -41,7 +47,6 @@ spring:
 server:
   port: 8090
 
-# Application specific configurations
 app:
   gemini:
     models:

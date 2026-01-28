@@ -30,3 +30,6 @@ replay_pid*
 
 # Environment variables
 .env
+
+# 폴더만 남기고 내용은 깃 제외
+/qa-prompts/history/*.txt

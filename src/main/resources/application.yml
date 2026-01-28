@@ -8,12 +8,11 @@ spring:
       connect-timeout: 60s
       read-timeout: 300s
 
-  # Google GenAI 설정 (API Key 방식)
   ai:
     google:
       genai:
         api-key: ${GEMINI_API_KEY}
-        project-id: ${GEMINI_PROJECT_ID} # Added project-id
+        project-id: ${GEMINI_PROJECT_ID}
         chat:
           options:
             model: ${GEMINI_MODEL:gemini-2.5-flash}
@@ -32,34 +31,29 @@ spring:
     # MCP Client 설정 (Playwright MCP Server 연결)
     mcp:
       client:
-        sync-timeout: 300s
+        sync-timeout: 150s
         stdio:
           connections:
             playwright:
               command: npx
               args:
-                - "-y"
+                - "--yes"
                 - "@playwright/mcp@latest"
                 - "--timeout-action"
                 - "300000"
                 - "--timeout-navigation"
                 - "300000"
-                - "--no-sandbox"
-            chrome-devtools:
+              env:
+                NPM_CONFIG_REGISTRY: "https://registry.npmjs.org/"
+
+            filesystem:
               command: npx
               args:
-                - "-y"
-                - "@chrome-devtools/mcp@latest"
-                - "--timeout-action"
-                - "300000"
-                - "--no-sandbox"
-          filesystem:
-            command: npx
-            args:
-              - "-y"
-              - "@modelcontextprotocol/server-filesystem"
-              - "./qa-prompts"
-  
+                - "--yes"
+                - "@modelcontextprotocol/server-filesystem"
+                - "./qa-prompts"
+              env:
+                NPM_CONFIG_REGISTRY: "https://registry.npmjs.org/"
   thymeleaf:
     cache: false
 
@@ -71,7 +65,8 @@ app:
     models:
       - gemini-2.5-flash
       - gemini-2.5-pro
+      -
 logging:
   level:
-    com.team.qa: DEBUG
+    com.auto.qa: DEBUG
     org.springframework.ai: INFO

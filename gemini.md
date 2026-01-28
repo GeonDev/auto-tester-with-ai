@@ -97,7 +97,8 @@ MCP Server → MCP Client → AI: "클릭 완료, 다음은..."
 | AI Starter | spring-ai-starter-model-google-genai | 1.1.2 |
 | AI Starter | spring-ai-starter-model-ollama       | 1.1.2 |
 | MCP Client | spring-ai-starter-mcp-client | 1.1.2 |
-| MCP Server | @playwright/mcp       | latest |
+MCP Server | @playwright/mcp       | latest |
+| MCP Server | @modelcontextprotocol/server-filesystem | latest |
 | MCP Server | @chrome-devtools/mcp | latest |
 | Frontend | Thymeleaf + WebSocket (STOMP) | - |
 | Container | Docker | - |
@@ -192,33 +193,31 @@ spring:
           temperature: ${OLLAMA_TEMPERATURE:0.3} # Environment variable for Ollama temperature
     mcp:
       client:
-        sync-timeout: 300s
+        sync-timeout: 150s
         stdio:
           connections:
             playwright:
               command: npx
               args:
-                - "-y"
+                - "--yes"
                 - "@playwright/mcp@latest"
                 - "--timeout-action"
                 - "300000"
                 - "--timeout-navigation"
                 - "300000"
-                - "--no-sandbox"
             chrome-devtools: # Added chrome-devtools MCP connection
               command: npx
               args:
-                - "-y"
-                - "@chrome-devtools/mcp@latest" # Placeholder package, adjust if actual package differs
+                - "--yes"
+                - "chrome-devtools-mcp@latest" # Placeholder package, adjust if actual package differs
                 - "--timeout-action"
                 - "300000"
-                - "--no-sandbox"
           filesystem:
             command: npx
             args:
-              - "-y"
+              - "--yes"
               - "@modelcontextprotocol/server-filesystem"
-              - "./qa-prompts"
+              - "${user.dir}/qa-prompts"
 
 server:
   port: 8090

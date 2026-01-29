@@ -30,6 +30,7 @@ import java.io.IOException;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.ToolDefinition;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
@@ -117,7 +118,36 @@ public class AiConfig {
                 .map(tc -> new ToolCallback() {
                     @Override
                     public ToolDefinition getToolDefinition() {
-                        return tc.getToolDefinition();
+                        ToolDefinition original = tc.getToolDefinition();
+                        String schemaJson = original.inputSchema();
+                        try {
+                            Map<String, Object> schemaMap = objectMapper.readValue(schemaJson, new TypeReference<Map<String, Object>>() {});
+                            if (schemaMap.containsKey("properties") && schemaMap.get("properties") instanceof Map) {
+                                Map<String, Object> props = (Map<String, Object>) schemaMap.get("properties");
+                                for (Map.Entry<String, Object> entry : props.entrySet()) {
+                                    if (entry.getValue() instanceof Map) {
+                                        Map<String, Object> propDetails = (Map<String, Object>) entry.getValue();
+                                        if (propDetails.get("type") instanceof List) {
+                                            List<?> types = (List<?>) propDetails.get("type");
+                                            if (!types.isEmpty()) {
+                                                propDetails.put("type", types.get(0));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            String newSchemaJson = objectMapper.writeValueAsString(schemaMap);
+                            return new ToolDefinition() {
+                                @Override
+                                public String name() { return original.name(); }
+                                @Override
+                                public String description() { return original.description(); }
+                                @Override
+                                public String inputSchema() { return newSchemaJson; }
+                            };
+                        } catch (Exception e) {
+                            return original;
+                        }
                     }
 
                     @Override

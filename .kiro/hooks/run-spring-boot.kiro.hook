@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Run Spring Boot",
+  "description": "Spring Boot 애플리케이션을 Gradle로 실행합니다",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "./gradlew bootRun",
+    "timeout": 0
+  }
+}

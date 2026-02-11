@@ -1,9 +1,12 @@
 pluginManagement {
     repositories {
-        mavenLocal()  // 로컬 Maven 저장소
+        mavenLocal()
         gradlePluginPortal()
         mavenCentral()
     }
 }
 
-rootProject.name = 'qa-agent-server'
+rootProject.name = 'auto-tester'
+
+include 'qa-agent-server'
+include 'infrastructure-analyzer-plugin'

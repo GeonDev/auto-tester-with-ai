@@ -35,3 +35,5 @@ replay_pid*
 /qa-prompts/history/*.txt
 /qa-prompts/report/*.md
 /.output.txt
+/infrastructure-analyzer-plugin/build/
+/infrastructure-analyzer-plugin/.gradle/

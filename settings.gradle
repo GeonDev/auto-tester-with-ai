@@ -1,1 +1,9 @@
+pluginManagement {
+    repositories {
+        mavenLocal()  // 로컬 Maven 저장소
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
 rootProject.name = 'qa-agent-server'

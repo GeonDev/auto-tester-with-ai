@@ -60,6 +60,35 @@ spring:
 server:
   port: 8090
 
+# 인프라 검증 설정 (테스트용)
+infrastructure:
+  validation:
+    company-domain: "jtbc.co.kr"
+    
+    # 명시적 파일 선언 (테스트)
+    files:
+      - path: "/nas2/was/key/cdn/signed.der"
+        critical: true
+        description: "CDN 서명 키"
+      - path: "/home/app/config/application.properties"
+        critical: false
+        description: "애플리케이션 설정 파일"
+    
+    # 명시적 API 선언 (테스트)
+    apis:
+      - url: "https://api.jtbc.co.kr/v1/health"
+        critical: true
+        description: "메인 API 헬스체크"
+      - url: "https://www.google.com"
+        critical: false
+        description: "외부 API (경고만)"
+    
+    # 제외 패턴
+    exclude-patterns:
+      - "localhost"
+      - "127.0.0.1"
+      - "*.local"
+
 app:
   gemini:
     models:

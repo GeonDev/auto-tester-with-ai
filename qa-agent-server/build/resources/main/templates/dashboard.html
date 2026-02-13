@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - QA Agent Server</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/sidebar.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="sidebar-brand">
+                    <i class="bi bi-robot"></i>
+                    <span>QA Agent</span>
+                </a>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="/dashboard" class="nav-link active">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/test-cases" class="nav-link">
+                        <i class="bi bi-list-check"></i>
+                        <span>Test Cases</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/chat" class="nav-link">
+                        <i class="bi bi-chat-dots"></i>
+                        <span>Chat</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/settings" class="nav-link">
+                        <i class="bi bi-gear"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="content-wrapper">
+        <div class="row">
+            <div class="col-12">
+                <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+                <hr>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">총 테스트 수</h6>
+                        <h2 class="card-title" id="totalTests">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">성공률</h6>
+                        <h2 class="card-title text-success" id="successRate">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">평균 실행시간</h6>
+                        <h2 class="card-title" id="avgTime">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">총 이슈</h6>
+                        <h2 class="card-title text-danger" id="totalIssues">-</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-graph-up"></i> 일별 테스트 실행 추이 (최근 7일)
+                    </div>
+                    <div class="card-body">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-pie-chart"></i> 심각도별 이슈 분포
+                    </div>
+                    <div class="card-body">
+                        <canvas id="issuesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Reports Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-clock-history"></i> 최근 테스트 결과
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>날짜</th>
+                                        <th>URL</th>
+                                        <th>모델</th>
+                                        <th>상태</th>
+                                        <th>이슈</th>
+                                        <th>실행시간</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportsTable">
+                                    <tr>
+                                        <td colspan="6" class="text-center">
+                                            <div class="spinner-border" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <nav>
+                            <ul class="pagination justify-content-center" id="pagination">
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentPage = 0;
+        const pageSize = 20;
+        let dailyChart, issuesChart;
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/dashboard/stats');
+                const stats = await response.json();
+                
+                document.getElementById('totalTests').textContent = stats.totalTests;
+                document.getElementById('successRate').textContent = stats.successRate.toFixed(1) + '%';
+                
+                const avgSeconds = stats.avgExecutionTime.seconds;
+                const avgMinutes = Math.floor(avgSeconds / 60);
+                const avgSecs = avgSeconds % 60;
+                document.getElementById('avgTime').textContent = 
+                    avgMinutes > 0 ? `${avgMinutes}m ${avgSecs}s` : `${avgSecs}s`;
+                
+                const totalIssues = (stats.issuesBySeverity.HIGH || 0) + 
+                                   (stats.issuesBySeverity.MEDIUM || 0) + 
+                                   (stats.issuesBySeverity.LOW || 0);
+                document.getElementById('totalIssues').textContent = totalIssues;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Load daily chart
+        async function loadDailyChart() {
+            try {
+                const response = await fetch('/api/dashboard/charts/daily?days=7');
+                const data = await response.json();
+                
+                const ctx = document.getElementById('dailyChart').getContext('2d');
+                if (dailyChart) dailyChart.destroy();
+                
+                dailyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: '테스트 실행 수',
+                            data: data.data,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to load daily chart:', error);
+            }
+        }
+
+        // Load issues chart
+        async function loadIssuesChart() {
+            try {
+                const response = await fetch('/api/dashboard/charts/issues');
+                const data = await response.json();
+                
+                const ctx = document.getElementById('issuesChart').getContext('2d');
+                if (issuesChart) issuesChart.destroy();
+                
+                issuesChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            data: data.data,
+                            backgroundColor: [
+                                'rgb(220, 53, 69)',
+                                'rgb(255, 193, 7)',
+                                'rgb(25, 135, 84)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to load issues chart:', error);
+            }
+        }
+
+        // Load reports
+        async function loadReports(page = 0) {
+            try {
+                const response = await fetch(`/api/dashboard/reports?page=${page}&size=${pageSize}`);
+                const reports = await response.json();
+                
+                const tbody = document.getElementById('reportsTable');
+                tbody.innerHTML = '';
+                
+                if (reports.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">테스트 결과가 없습니다.</td></tr>';
+                    return;
+                }
+                
+                reports.forEach(report => {
+                    const row = document.createElement('tr');
+                    
+                    const date = new Date(report.executedAt);
+                    const dateStr = date.toLocaleString('ko-KR');
+                    
+                    const statusBadge = report.status === 'SUCCESS' 
+                        ? '<span class="badge bg-success">성공</span>'
+                        : '<span class="badge bg-danger">실패</span>';
+                    
+                    const issueCount = (report.highIssueCount || 0) + 
+                                      (report.mediumIssueCount || 0) + 
+                                      (report.lowIssueCount || 0);
+                    
+                    const execSeconds = report.executionTime?.seconds || 0;
+                    const execMinutes = Math.floor(execSeconds / 60);
+                    const execSecs = execSeconds % 60;
+                    const execTime = execMinutes > 0 ? `${execMinutes}m ${execSecs}s` : `${execSecs}s`;
+                    
+                    row.innerHTML = `
+                        <td>${dateStr}</td>
+                        <td><small>${report.url || '-'}</small></td>
+                        <td><small>${report.model || '-'}</small></td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <span class="badge bg-danger">${report.highIssueCount || 0}</span>
+                            <span class="badge bg-warning">${report.mediumIssueCount || 0}</span>
+                            <span class="badge bg-success">${report.lowIssueCount || 0}</span>
+                        </td>
+                        <td>${execTime}</td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                currentPage = page;
+            } catch (error) {
+                console.error('Failed to load reports:', error);
+                document.getElementById('reportsTable').innerHTML = 
+                    '<tr><td colspan="6" class="text-center text-danger">데이터 로드 실패</td></tr>';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadDailyChart();
+            loadIssuesChart();
+            loadReports(0);
+        });
+    </script>
+</body>
+</html>

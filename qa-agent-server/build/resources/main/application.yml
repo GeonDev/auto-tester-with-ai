@@ -1,0 +1,101 @@
+spring:
+  application:
+    name: qa-agent-server
+  
+  # HTTP Client timeout configuration
+  http:
+    client:
+      connect-timeout: 60s
+      read-timeout: 300s
+
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+        project-id: ${GEMINI_PROJECT_ID}
+        chat:
+          options:
+            model: ${GEMINI_MODEL:gemini-2.5-flash}
+            temperature: ${GEMINI_TEMPERATURE:0.3}
+    
+    # Ollama 설정
+    ollama:
+      chat:
+        options:
+          model: llama3.2 # Default model, can be overridden by user
+        base-url: http://localhost:11434 # Default Ollama host (assuming local installation)
+      models: # Custom models list for the application to display/use
+        - llama3.2
+        - qwen2.5:3b
+
+    # MCP Client 설정 (Playwright MCP Server 연결)
+    mcp:
+      client:
+        sync-timeout: 150s
+        stdio:
+          connections:
+            playwright:
+              command: npx
+              args:
+                - "--yes"
+                - "@playwright/mcp@latest"
+                - "--timeout-action"
+                - "300000"
+                - "--timeout-navigation"
+                - "300000"
+            filesystem:
+              command: npx
+              args:
+                - "--yes"
+                - "@modelcontextprotocol/server-filesystem"
+                - "${user.dir}/qa-prompts"
+            chrome-devtools:
+              command: npx
+              args:
+                - "--yes"
+                - "chrome-devtools-mcp@latest"
+  thymeleaf:
+    cache: false
+
+server:
+  port: 8090
+
+# 인프라 검증 설정 (테스트용)
+infrastructure:
+  validation:
+    company-domain: "jtbc.co.kr"
+    
+    # 명시적 파일 선언 (테스트)
+    files:
+      - path: "/nas2/was/key/cdn/signed.der"
+        critical: true
+        description: "CDN 서명 키"
+      - path: "/home/app/config/application.properties"
+        critical: false
+        description: "애플리케이션 설정 파일"
+    
+    # 명시적 API 선언 (테스트)
+    apis:
+      - url: "https://api.jtbc.co.kr/v1/health"
+        critical: true
+        description: "메인 API 헬스체크"
+      - url: "https://www.google.com"
+        critical: false
+        description: "외부 API (경고만)"
+    
+    # 제외 패턴
+    exclude-patterns:
+      - "localhost"
+      - "127.0.0.1"
+      - "*.local"
+
+app:
+  gemini:
+    models:
+      - gemini-2.5-flash
+      - gemini-2.5-pro
+      -
+logging:
+  level:
+    com.auto.qa: DEBUG
+    org.springframework.ai: INFO
